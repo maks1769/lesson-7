@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Money tracker</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+    <script src="https://rawgit.com/moment/moment/2.2.1/min/moment.min.js"></script>
+</head>
+<body>
+<div class="container" id="app">
+    <div class="row">
+        <div class="col-md-12 mt-5">
+            <h1 class="text-center text-primary font-weight-bold">
+                <strong>{{ total }}</strong> $
+            </h1>
+        </div>
+        <div class="col-md-4">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">
+                        <img src="https://cdn3.iconfinder.com/data/icons/social-media-toolkit-1/32/comment-speak-social-media-tools-ui-512.png" width="16" alt="">
+                    </span>
+                </div>
+                <input class="form-control" v-model="inputComment" placeholder="Comment">
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">$</span>
+                </div>
+                <input type="text" v-model="inputAmount" class="form-control" placeholder="0.00">
+                <div class="input-group-append">
+                    <button class="btn btn-danger" type="button" @click="addHistory('credit')">-</button>
+                    <button class="btn btn-success" type="button" @click="addHistory('debit')">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+
+        <div class="col-md-12 py-4">
+            <ul class="list-group list-group-flush text-secondary" v-for="item in history">
+
+                <li class="list-group-item">
+                    <span :class="item.type === 'debit' ? 'text-success' : 'text-danger'">
+                        {{ item.type === 'debit' ? '+' : '-'}}
+                        {{ item.amount }} $
+                    </span>
+                    <br>
+                    <span class="float-left"><small>{{ item.comment }}</small></span>
+                    <span class="float-right"><small>{{ item.date }}</small></span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data: ({
+            total: 934,
+            inputComment: '',
+            inputAmount: 0,
+            history: [
+                {
+                    amount: 347.20,
+                    comment: 'Salary for August 2020',
+                    type: 'debit',
+                    date: moment().format('YYYY.MM.DD HH:mm:ss'),
+                },
+                {
+                    amount: 41.59,
+                    comment: 'Burger and Beer',
+                    type: 'credit',
+                    date: moment().subtract(1, 'days').format('YYYY.MM.DD HH:mm:ss'),
+                }
+            ]
+        }),
+
+        methods: {
+            addHistory(type) {
+                this.history.push({
+                    amount: this.inputAmount,
+                    comment: this.inputComment,
+                    date: moment().format('YYYY.MM.DD HH:mm:ss'),
+                    type,
+                });
+
+                this.inputAmount = 0;
+                this.inputComment = '';
+            }
+        }
+    });
+</script>
+</body>
+</html>
