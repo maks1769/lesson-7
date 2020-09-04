@@ -6,51 +6,178 @@
     <title>Money tracker</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+    <script src="https://rawgit.com/moment/moment/2.2.1/min/moment.min.js"></script>
+    <script src="https://unpkg.com/vuex@3.5.1/dist/vuex.js"></script>
 </head>
 <body>
 <div class="container" id="app">
+    <currency-switcher></currency-switcher>
     <div class="row">
         <div class="col-md-12 mt-5">
-            <h1 class="text-center text-primary font-weight-bold">
-                <strong>934</strong> $
-            </h1>
-        </div>
-        <div class="col-md-4">
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <span class="input-group-text">
-                        <img src="https://cdn3.iconfinder.com/data/icons/social-media-toolkit-1/32/comment-speak-social-media-tools-ui-512.png" width="16" alt="">
-                    </span>
-                </div>
-                <input class="form-control" placeholder="Comment">
-            </div>
-        </div>
-        <div class="col-md-8">
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <span class="input-group-text">$</span>
-                </div>
-                <input type="text" class="form-control" placeholder="0.00">
-                <div class="input-group-append">
-                    <button class="btn btn-danger" type="button">-</button>
-                    <button class="btn btn-success" type="button">+</button>
-                </div>
-            </div>
+            <total></total>
         </div>
     </div>
+    <money-form></money-form>
     <div class="row">
-
-        <div class="col-md-12 py-4">
-            <ul class="list-group list-group-flush text-secondary">
-                <li class="list-group-item"><span class="text-success">+ 347.20 $</span><br> <small>Salary for August 2020</small></li>
-                <li class="list-group-item"><span class="text-danger">- 41.59 $</span><br> <small>Burger and Beer</small></li>
-            </ul>
-        </div>
+        <history-list></history-list>
+    </div>
     </div>
 </div>
 
 <script>
-    new Vue({el: '#app'});
+    Vue.use(Vuex);
+
+
+    const store = new Vuex.Store({
+        state: {
+            currency: '$',
+            history: [],
+        },
+        getters: {
+            total: (state) => {
+                return state.history.reduce((sum, row) => {
+                    return row.type === 'debit' ? sum + row.amount : sum - row.amount;
+                }, 0).toFixed(2);
+            }
+        },
+        mutations: {
+            changeCurrency: (state, newCurrency) => {
+                state.currency = newCurrency;
+            },
+
+            addHistory(state, {amount, type, comment, date = moment().format('YYYY.MM.DD HH:mm:ss')}) {
+                state.history.push({amount, comment, type, date});
+
+                /*fetch('http://sadas')
+                .then(response => response.json())
+                .then(response => {
+
+                })*/
+            }
+        },
+        actions: {
+            fetchHistory({commit, state}) {
+                const history = localStorage.getItem('history');
+
+                if (history) {
+                    const historyArray = JSON.parse(history);
+
+                    historyArray.forEach(item => commit('addHistory', item));
+                }
+            },
+
+            async addHistory({commit, state}, history) {
+                commit('addHistory', history);
+
+                localStorage.setItem('history', JSON.stringify(state.history));
+            }
+        }
+    });
+
+    Vue.component('total', {
+        store,
+        template: `
+            <h1 class="text-center text-primary font-weight-bold">
+                <strong>{{ store.getters['total'] }}</strong> {{ store.state.currency }}
+            </h1>`,
+    });
+
+    Vue.component('history-list', {
+        store,
+        template:  `
+         <div class="col-md-12 py-4">
+             <ul class="list-group list-group-flush text-secondary" v-for="item in store.state.history">
+               <history-item :item="item"></history-item>
+             </ul>
+         </div>`
+    });
+
+    Vue.component('history-item', {
+        store,
+        props: ['item'],
+        template: `
+         <li class="list-group-item">
+             <span :class="item.type === 'debit' ? 'text-success' : 'text-danger'">
+               {{ item.type === 'debit' ? '+' : '-'}}
+               {{ item.amount }} {{ store.state.currency }}
+             </span>
+             <br>
+             <span class="float-left"><small>{{ item.comment }}</small></span>
+             <span class="float-right"><small>{{ item.date }}</small></span>
+         </li>`
+    });
+
+    Vue.component('money-form', {
+        store,
+        data() {
+            return {
+                inputComment: '',
+                inputAmount: '',
+            }
+        },
+        template: `
+            <div class="row">
+              <div class="col-md-4">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                        <span class="input-group-text">
+                            <img src="https://cdn3.iconfinder.com/data/icons/social-media-toolkit-1/32/comment-speak-social-media-tools-ui-512.png" width="16" alt="">
+                        </span>
+                </div>
+                <input class="form-control" v-model="inputComment" placeholder="Comment">
+              </div>
+              </div>
+              <div class="col-md-8">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">{{ store.state.currency }}</span>
+                </div>
+                <input type="number" class="form-control" v-model="inputAmount" placeholder="0.00">
+                <div class="input-group-append">
+                  <button class="btn btn-danger" type="button" @click="addHistory('credit')">-</button>
+                  <button class="btn btn-success" type="button" @click="addHistory('debit')">+</button>
+                </div>
+              </div>
+              </div>
+            </div>`,
+        methods: {
+            async addHistory(type) {
+                const amount = parseFloat(this.inputAmount);
+
+                if (Number.isNaN(amount) === false && amount > 0) {
+                    await store.dispatch('addHistory', {
+                        type,
+                        amount,
+                        comment: this.inputComment,
+                    })
+
+                    this.inputComment = '';
+                    this.inputAmount = '';
+                }
+            }
+        },
+    });
+
+    Vue.component('currency-switcher', {
+        store,
+        name: 'currencies',
+        template: `
+            <div class="btn-group" role="group" aria-label="Basic example">
+              <button @click="store.commit('changeCurrency', 'USD')"
+                class="btn btn-success">USD</button>
+              <button @click="store.commit('changeCurrency', 'EUR')"  class="btn btn-primary">EUR</button>
+              <button @click="store.commit('changeCurrency', 'UAH')"  class="btn btn-warning">UAH</button>
+            </div>
+        `
+    });
+
+    new Vue({
+        el: '#app',
+        store,
+        async mounted() {
+            await store.dispatch('fetchHistory')
+        }
+    });
 </script>
 </body>
 </html>
